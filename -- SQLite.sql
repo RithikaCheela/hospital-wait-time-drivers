@@ -121,7 +121,7 @@ FROM Hospital_General_Information;
 
 SELECT * FROM General_info_table LIMIT 15;
 
-----------
+---------- FINAL TABLE
 ----- MERGING FINAL TABLE: the general info with wait time & communication - general info exists for all hospitals in the table
 DROP TABLE IF EXISTS Full_Analysis_Table;
 CREATE TABLE Full_Analysis_Table AS
@@ -131,8 +131,38 @@ SELECT ws.*,
 FROM Wait_Time_Communication ws
 LEFT JOIN General_info_table g ON ws.Facility_ID = g.Facility_ID;
 ----------
-SELECT * FROM Full_Analysis_Table LIMIT 30;
+SELECT * FROM Full_Analysis_Table LIMIT 10;
 
 -- some of the hospitals have like no communication values at all, so even tho values exist
 -- they are just NULL, so theres no data to compare with the wait times. or we keep and use the 
 -- other data in that rows for analysis?
+
+------------- Checking missing values and patterns of missing values by hospital ownership and type
+SELECT Hospital_Ownership, 
+       COUNT(*) AS total_hospitals,
+       SUM(CASE WHEN Nurse_Score IS NULL AND Doctor_Score IS NULL AND Hospital_Score IS NULL 
+                 AND Recommend_Score IS NULL AND Overall_Rating IS NULL THEN 1 ELSE 0 END) AS missing_satisfaction,
+       ROUND(100.0 * SUM(CASE WHEN Nurse_Score IS NULL AND Doctor_Score IS NULL AND Hospital_Score IS NULL 
+                 AND Recommend_Score IS NULL AND Overall_Rating IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_missing
+FROM Full_Analysis_Table
+GROUP BY Hospital_Ownership
+ORDER BY pct_missing DESC;
+
+SELECT Hospital_Ownership, Hospital_Type, COUNT(*) AS total
+FROM Full_Analysis_Table
+WHERE Hospital_Ownership IN ('Tribal', 'Government - Federal', 'Government - Local', 'Government - Hospital District or Authority')
+GROUP BY Hospital_Ownership, Hospital_Type
+ORDER BY Hospital_Ownership, total DESC;
+
+SELECT Hospital_Ownership, Hospital_Type,
+       COUNT(*) AS total,
+       SUM(CASE WHEN Nurse_Score IS NULL AND Doctor_Score IS NULL AND Hospital_Score IS NULL 
+                 AND Recommend_Score IS NULL AND Overall_Rating IS NULL THEN 1 ELSE 0 END) AS missing,
+       ROUND(100.0 * SUM(CASE WHEN Nurse_Score IS NULL AND Doctor_Score IS NULL AND Hospital_Score IS NULL 
+                 AND Recommend_Score IS NULL AND Overall_Rating IS NULL THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_missing
+FROM Full_Analysis_Table
+WHERE Hospital_Type = 'Acute Care Hospitals'
+GROUP BY Hospital_Ownership
+ORDER BY pct_missing DESC;
+-------------
+
